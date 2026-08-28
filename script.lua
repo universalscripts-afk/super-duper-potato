@@ -1025,20 +1025,24 @@ CrosshairTab:AddSlider("Crosshair Size", 2, 30, Config.CrosshairSize, function(v
 CrosshairTab:AddSlider("Crosshair Gap", 0, 20, Config.CrosshairGap, function(v) Config.CrosshairGap = v; updateCrosshairLayout() end)
 
 local MovementTab = CreateTab("Movement")
-MovementTab:AddSlider("WalkSpeed", 16, 200, Config.WalkSpeed, function(v) Config.WalkSpeed = v end)
+-- Speed Hack & WalkSpeed
 MovementTab:AddToggle("Speed Hack", Config.SpeedHack, function(s) Config.SpeedHack = s end)
+MovementTab:AddSlider("WalkSpeed", 16, 200, Config.WalkSpeed, function(v) Config.WalkSpeed = v end)
 
-MovementTab:AddSlider("JumpPower", 50, 400, Config.JumpPower, function(v) Config.JumpPower = v end)
+-- Jump Hack & JumpPower
 MovementTab:AddToggle("Jump Hack", Config.JumpHack, function(s) Config.JumpHack = s end)
+MovementTab:AddSlider("JumpPower", 50, 400, Config.JumpPower, function(v) Config.JumpPower = v end)
 
-MovementTab:AddToggle("Noclip", Config.Noclip, function(s) Config.Noclip = s end)
-
-MovementTab:AddSlider("Fly Speed", 10, 200, Config.FlySpeed, function(v) Config.FlySpeed = v end)
+-- Fly & Fly Speed
 MovementTab:AddToggle("Fly", Config.Fly, function(s) Config.Fly = s end)
+MovementTab:AddSlider("Fly Speed", 10, 200, Config.FlySpeed, function(v) Config.FlySpeed = v end)
 
-MovementTab:AddSlider("Spin Speed", 5, 100, Config.SpinSpeed, function(v) Config.SpinSpeed = v end)
+-- Spinbot & Spin Speed
 MovementTab:AddToggle("Spinbot", Config.Spinbot, function(s) Config.Spinbot = s end)
+MovementTab:AddSlider("Spin Speed", 5, 100, Config.SpinSpeed, function(v) Config.SpinSpeed = v end)
 
+-- Other Movement options
+MovementTab:AddToggle("Noclip", Config.Noclip, function(s) Config.Noclip = s end)
 MovementTab:AddToggle("Shift Lock (Right Shift)", Config.ShiftLockEnabled, function(s) Config.ShiftLockEnabled = s end)
 
 local SettingsTab = CreateTab("Settings")
