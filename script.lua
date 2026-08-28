@@ -1,4 +1,4 @@
--- Universal Framework (Cyberpunk Neon V4.0 - Ultra Premium Edition without Manual Save/Load Buttons)
+-- Universal Framework (Cyberpunk Neon V4.0 - Interactive Target List Version)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -23,11 +23,14 @@ local Config = {
     AimbotKey = Enum.KeyCode.E,
     SmoothAimbot = false,
     Smoothness = 5,
-    WallCheck = false,
+    WallCheck = true,
     TargetPartName = "Head",
     
     AutoShootEnabled = false,
     AutoShootKey = Enum.KeyCode.Q,
+    
+    Whitelist = {},
+    TeamCheck = false,
     
     BoxESP = false,
     Tracers = false,
@@ -38,11 +41,6 @@ local Config = {
     FreecamSpeed = 50,
     FreecamSensitivity = 0.3,
     FullbrightEnabled = false,
-    
-    CustomCrosshairEnabled = false,
-    CrosshairStyle = "Cross", 
-    CrosshairSize = 10,
-    CrosshairGap = 4,
     
     SpeedHack = false,
     WalkSpeed = 32,
@@ -55,11 +53,12 @@ local Config = {
     SpinSpeed = 20,
     ShiftLockEnabled = false,
     
-    TargetActionMode = "Orbit",
+    TargetActionMode = "None",
     OrbitRadius = 15,
     OrbitSpeed = 10,
     ActiveOrbitTarget = nil,
     ActiveSpectateTarget = nil,
+    SelectedTargetName = "None",
     
     MenuKey = Enum.KeyCode.RightControl
 }
@@ -102,20 +101,26 @@ local function loadConfig()
             end
         end
     end
+    Config.TargetPartName = "Head"
 end
 
--- Automatically load saved settings immediately on script execution
 loadConfig()
 
 ---------------------------------------------------------
 -- CLEANUP OLD INSTANCES
 ---------------------------------------------------------
+local function isWhitelisted(player)
+    if Config.Whitelist and Config.Whitelist[player.Name] then return true end
+    if Config.TeamCheck and player.Team == LocalPlayer.Team and player ~= LocalPlayer then return true end
+    return false
+end
+
 for _, name in ipairs({"UniversalMenuElite", "UniversalFOVGui", "UniversalCrosshairGui", "UniversalFloatingIcon"}) do
     if CoreGui:FindFirstChild(name) then CoreGui[name]:Destroy() end
 end
 
 ---------------------------------------------------------
--- FOV & CROSSHAIR DRAWING
+-- FOV DRAWING
 ---------------------------------------------------------
 local FOVGui = Instance.new("ScreenGui", CoreGui)
 FOVGui.Name = "UniversalFOVGui"
@@ -130,59 +135,6 @@ Instance.new("UICorner", FOVCircle).CornerRadius = UDim.new(1, 0)
 local FOVStroke = Instance.new("UIStroke", FOVCircle)
 FOVStroke.Color = Color3.fromRGB(0, 255, 204)
 FOVStroke.Thickness = 1.8
-
-local CrosshairGui = Instance.new("ScreenGui", CoreGui)
-CrosshairGui.Name = "UniversalCrosshairGui"
-
-local CrosshairContainer = Instance.new("Frame", CrosshairGui)
-CrosshairContainer.AnchorPoint = Vector2.new(0.5, 0.5)
-CrosshairContainer.Position = UDim2.new(0.5, 0, 0.5, 0)
-CrosshairContainer.Size = UDim2.new(0, 50, 0, 50)
-CrosshairContainer.BackgroundTransparency = 1
-CrosshairContainer.Visible = false
-
-local CH_Top = Instance.new("Frame", CrosshairContainer)
-local CH_Bottom = Instance.new("Frame", CrosshairContainer)
-local CH_Left = Instance.new("Frame", CrosshairContainer)
-local CH_Right = Instance.new("Frame", CrosshairContainer)
-local CH_Dot = Instance.new("Frame", CrosshairContainer)
-local CH_CircleRing = Instance.new("Frame", CrosshairContainer)
-
-for _, part in ipairs({CH_Top, CH_Bottom, CH_Left, CH_Right, CH_Dot}) do
-    part.BackgroundColor3 = Color3.fromRGB(0, 255, 204)
-    part.BorderSizePixel = 0
-end
-CH_CircleRing.BackgroundTransparency = 1
-CH_CircleRing.BorderSizePixel = 0
-Instance.new("UICorner", CH_Dot).CornerRadius = UDim.new(1, 0)
-Instance.new("UICorner", CH_CircleRing).CornerRadius = UDim.new(1, 0)
-local CH_RingStroke = Instance.new("UIStroke", CH_CircleRing)
-CH_RingStroke.Color = Color3.fromRGB(0, 255, 204)
-CH_RingStroke.Thickness = 1.5
-
-local function updateCrosshairLayout()
-    CrosshairContainer.Visible = Config.CustomCrosshairEnabled
-    if not Config.CustomCrosshairEnabled then return end
-    CH_Top.Visible, CH_Bottom.Visible, CH_Left.Visible, CH_Right.Visible, CH_Dot.Visible, CH_CircleRing.Visible = false, false, false, false, false, false
-    
-    local size, gap, style = Config.CrosshairSize, Config.CrosshairGap, Config.CrosshairStyle
-    if style == "Cross" then
-        CH_Top.Visible, CH_Bottom.Visible, CH_Left.Visible, CH_Right.Visible = true, true, true, true
-        CH_Top.Size = UDim2.new(0, 2, 0, size); CH_Top.Position = UDim2.new(0.5, -1, 0.5, -gap - size)
-        CH_Bottom.Size = UDim2.new(0, 2, 0, size); CH_Bottom.Position = UDim2.new(0.5, -1, 0.5, gap)
-        CH_Left.Size = UDim2.new(0, size, 0, 2); CH_Left.Position = UDim2.new(0.5, -gap - size, 0.5, -1)
-        CH_Right.Size = UDim2.new(0, size, 0, 2); CH_Right.Position = UDim2.new(0.5, gap, 0.5, -1)
-    elseif style == "Dot" then
-        CH_Dot.Visible = true; CH_Dot.Size = UDim2.new(0, size / 2, 0, size / 2)
-    elseif style == "Circle" then
-        CH_CircleRing.Visible = true; CH_CircleRing.Size = UDim2.new(0, size * 2, 0, size * 2)
-    elseif style == "T-Shape" then
-        CH_Bottom.Visible, CH_Left.Visible, CH_Right.Visible = true, true, true
-        CH_Bottom.Size = UDim2.new(0, 2, 0, size); CH_Bottom.Position = UDim2.new(0.5, -1, 0.5, gap)
-        CH_Left.Size = UDim2.new(0, size, 0, 2); CH_Left.Position = UDim2.new(0.5, -gap - size, 0.5, -1)
-        CH_Right.Size = UDim2.new(0, size, 0, 2); CH_Right.Position = UDim2.new(0.5, gap, 0.5, -1)
-    end
-end
 
 ---------------------------------------------------------
 -- FULLBRIGHT & FREECAM
@@ -237,6 +189,14 @@ local function toggleFreecam(state)
 end
 
 ---------------------------------------------------------
+-- TARGET UTILITIES
+---------------------------------------------------------
+local function getTargetPlayer()
+    if Config.SelectedTargetName == "None" then return nil end
+    return Players:FindFirstChild(Config.SelectedTargetName)
+end
+
+---------------------------------------------------------
 -- AIMBOT & ESP LOGIC
 ---------------------------------------------------------
 local currentLockedTarget = nil
@@ -245,26 +205,22 @@ raycastParams.FilterType = Enum.RaycastFilterType.Blacklist
 
 local function isVisible(targetPart, ignoreChar)
     if not Config.WallCheck then return true end
-    
     local ignoreList = {LocalPlayer.Character}
-    if ignoreChar then
-        table.insert(ignoreList, ignoreChar)
-    end
+    if ignoreChar then table.insert(ignoreList, ignoreChar) end
     raycastParams.FilterDescendantsInstances = ignoreList
-    
     local result = Workspace:Raycast(Camera.CFrame.Position, targetPart.Position - Camera.CFrame.Position, raycastParams)
     return result == nil
 end
 
-local function getClosestPartToCenter(maxDistance, partName)
+local function getClosestPartToCenter(maxDistance)
     local closestPart, shortestDistance = nil, maxDistance
     local center = Vector2.new(Camera.ViewportSize.X * 0.5, Camera.ViewportSize.Y * 0.5)
     for _, player in pairs(Players:GetPlayers()) do
-        if player ~= LocalPlayer then
+        if player ~= LocalPlayer and not isWhitelisted(player) then
             local char = player.Character
             if char then
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                local targetPart = char:FindFirstChild(partName) or char:FindFirstChild("Head")
+                local targetPart = char:FindFirstChild("Head")
                 if hum and hum.Health > 0 and targetPart then
                     local screenPos, onScreen = Camera:WorldToViewportPoint(targetPart.Position)
                     if onScreen and isVisible(targetPart, char) then
@@ -290,8 +246,8 @@ local function setupPlayerESP(player)
 
         local highlight = Instance.new("Highlight")
         highlight.FillTransparency = 0.6
-        highlight.FillColor = Color3.fromRGB(255, 0, 85)
-        highlight.OutlineColor = Color3.fromRGB(0, 255, 204)
+        highlight.FillColor = Color3.fromRGB(0, 150, 255)
+        highlight.OutlineColor = Color3.fromRGB(255, 255, 100)
         highlight.Adornee = character
         highlight.Enabled = Config.BoxESP
         highlight.Parent = character
@@ -300,7 +256,7 @@ local function setupPlayerESP(player)
         local att1 = Instance.new("Attachment", rootPart)
         local beam = Instance.new("Beam")
         beam.Attachment0, beam.Attachment1 = att0, att1
-        beam.Color = ColorSequence.new(Color3.fromRGB(0, 255, 204))
+        beam.Color = ColorSequence.new(Color3.fromRGB(0, 150, 255))
         beam.Width0, beam.Width1, beam.FaceCamera = 0.08, 0.08, true
         beam.Enabled = Config.Tracers
         beam.Parent = rootPart
@@ -330,7 +286,7 @@ local function setupPlayerESP(player)
 
         local healthBarFill = Instance.new("Frame", healthBarBg)
         healthBarFill.Size = UDim2.new(1, 0, 1, 0)
-        healthBarFill.BackgroundColor3 = Color3.fromRGB(0, 255, 120)
+        healthBarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 100)
         healthBarFill.BorderSizePixel = 0
         Instance.new("UICorner", healthBarFill).CornerRadius = UDim.new(1, 0)
 
@@ -358,23 +314,27 @@ RunService.RenderStepped:Connect(function(dt)
     FOVCircle.Visible = Config.ShowFOVCircle
     currentLockedTarget = nil
 
-    if Config.TargetActionMode == "Spectate" and Config.ActiveSpectateTarget then
-        if Config.ActiveSpectateTarget.Character and Config.ActiveSpectateTarget.Character:FindFirstChild("Humanoid") then
-            Camera.CameraSubject = Config.ActiveSpectateTarget.Character.Humanoid
+    local targetPlayer = getTargetPlayer()
+    if Config.TargetActionMode == "Spectate" and targetPlayer then
+        if targetPlayer.Character and targetPlayer.Character:FindFirstChild("Humanoid") then
+            Camera.CameraSubject = targetPlayer.Character.Humanoid
         end
-    end
-
-    if Config.TargetActionMode == "Orbit" and Config.ActiveOrbitTarget then
-        local targetRoot = Config.ActiveOrbitTarget.Character and Config.ActiveOrbitTarget.Character:FindFirstChild("HumanoidRootPart")
+    elseif Config.TargetActionMode == "Orbit" and targetPlayer then
+        local targetRoot = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
         local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if targetRoot and myRoot then
             local t = tick() * Config.OrbitSpeed
             myRoot.CFrame = CFrame.new(targetRoot.Position + Vector3.new(math.cos(t) * Config.OrbitRadius, 3, math.sin(t) * Config.OrbitRadius), targetRoot.Position)
         end
+    elseif Config.TargetActionMode == "None" then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum and Camera.CameraSubject ~= hum and not Config.FreecamEnabled then
+            Camera.CameraSubject = hum
+        end
     end
 
     if Config.AimbotEnabledState and not Config.FreecamEnabled then
-        local targetPart = getClosestPartToCenter(Config.AimbotFOV, Config.TargetPartName)
+        local targetPart = getClosestPartToCenter(Config.AimbotFOV)
         if targetPart then
             currentLockedTarget = targetPart.Parent
             Camera.CFrame = Camera.CFrame:Lerp(CFrame.new(Camera.CFrame.Position, targetPart.Position), 1 / math.max(Config.Smoothness, 1))
@@ -436,7 +396,7 @@ RunService.RenderStepped:Connect(function(dt)
         for player, esp in pairs(ESPData) do
             local pChar, pHumanoid, pRoot = player.Character, player.Character and player.Character:FindFirstChildOfClass("Humanoid"), player.Character and player.Character:FindFirstChild("HumanoidRootPart")
             if pChar and pHumanoid and pRoot and pHumanoid.Health > 0 then
-                esp.Highlight.FillColor = (pChar == currentLockedTarget) and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(255, 0, 85)
+                esp.Highlight.FillColor = (pChar == currentLockedTarget) and Color3.fromRGB(255, 255, 180) or Color3.fromRGB(0, 150, 255)
                 esp.Highlight.Enabled = Config.BoxESP or (pChar == currentLockedTarget)
                 if Config.Tracers and localRoot then
                     esp.Attachment0.WorldPosition = localRoot.Position - Vector3.new(0, 2, 0)
@@ -447,7 +407,7 @@ RunService.RenderStepped:Connect(function(dt)
                 if Config.NameESP or Config.DistanceESP then
                     esp.Billboard.Enabled = true
                     local text = Config.NameESP and player.Name or ""
-                    if Config.DistanceESP then text = text .. " [" .. math.floor((pRoot.Position - Camera.CFrame.Position).Magnitude) .. "m]" end
+                    if Config.DistanceESP then text = text .. " [" .. math.floor((pRoot.Position - Camera.CFrame.Position).Magnitude) .."m]" end
                     esp.Label.Text = text
                     esp.Label.Visible = true
                 else
@@ -467,7 +427,7 @@ RunService.RenderStepped:Connect(function(dt)
 end)
 
 ---------------------------------------------------------
--- ULTRA-PREMIUM CYBERPUNK UI V4.0 (PIXEL PERFECT GLASS)
+-- UI SETUP & BUILDERS
 ---------------------------------------------------------
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
 ScreenGui.Name = "UniversalMenuElite"
@@ -483,13 +443,11 @@ MainFrame.Active = true
 
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
 
--- Neon Cyberpunk Glow Border Stroke
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Color = Color3.fromRGB(0, 255, 204)
 MainStroke.Thickness = 1.2
 MainStroke.Transparency = 0.3
 
--- Subtle Background Gradient Layer
 local BgGradient = Instance.new("UIGradient", MainFrame)
 BgGradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(18, 22, 31)),
@@ -497,9 +455,6 @@ BgGradient.Color = ColorSequence.new({
 })
 BgGradient.Rotation = 45
 
----------------------------------------------------------
--- FLOATING MINIMIZE / RESTORE ICON
----------------------------------------------------------
 local FloatingGui = Instance.new("ScreenGui", CoreGui)
 FloatingGui.Name = "UniversalFloatingIcon"
 FloatingGui.ResetOnSpawn = false
@@ -521,9 +476,6 @@ local OpenStroke = Instance.new("UIStroke", OpenButton)
 OpenStroke.Color = Color3.fromRGB(0, 255, 204)
 OpenStroke.Thickness = 1.5
 
----------------------------------------------------------
--- TITLE BAR & WINDOW CONTROLS
----------------------------------------------------------
 local TitleBar = Instance.new("Frame", MainFrame)
 TitleBar.Size = UDim2.new(1, 0, 0, 42)
 TitleBar.BackgroundTransparency = 1
@@ -577,7 +529,6 @@ local CloseBtn = createTopButton("×", -36, Color3.fromRGB(255, 40, 90), functio
     ScreenGui:Destroy()
     FloatingGui:Destroy()
     FOVGui:Destroy()
-    CrosshairGui:Destroy()
 end)
 
 local function toggleMinimize()
@@ -593,9 +544,6 @@ end
 local MinimizeBtn = createTopButton("-", -70, Color3.fromRGB(0, 200, 255), toggleMinimize)
 OpenButton.MouseButton1Click:Connect(toggleRestore)
 
----------------------------------------------------------
--- SIDEBAR & NAVIGATION STRUCTURE
----------------------------------------------------------
 local Sidebar = Instance.new("ScrollingFrame", MainFrame)
 Sidebar.Size = UDim2.new(0, 150, 1, -54)
 Sidebar.Position = UDim2.new(0, 12, 0, 46)
@@ -639,14 +587,14 @@ UserInputService.InputBegan:Connect(function(input, gpe)
             saveConfig()
             if aimbotKeyButtonRef then
                 aimbotKeyButtonRef.Text = "  Aimbot Key: [" .. tostring(Config.AimbotKey.Name) .. "] (" .. (Config.AimbotEnabledState and "ON" or "OFF") .. ")"
-                aimbotKeyButtonRef.TextColor3 = Config.AimbotEnabledState and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+                aimbotKeyButtonRef.TextColor3 = Config.AimbotEnabledState and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
             end
         elseif input.KeyCode == Config.AutoShootKey then
             Config.AutoShootEnabled = not Config.AutoShootEnabled
             saveConfig()
             if autoShootKeyButtonRef then
                 autoShootKeyButtonRef.Text = "  Auto Shoot Key: [" .. tostring(Config.AutoShootKey.Name) .. "] (" .. (Config.AutoShootEnabled and "ON" or "OFF") .. ")"
-                autoShootKeyButtonRef.TextColor3 = Config.AutoShootEnabled and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+                autoShootKeyButtonRef.TextColor3 = Config.AutoShootEnabled and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
             end
         elseif input.KeyCode == Enum.KeyCode.RightShift then
             Config.ShiftLockEnabled = not Config.ShiftLockEnabled
@@ -659,15 +607,12 @@ UserInputService.InputBegan:Connect(function(input, gpe)
             end
             if shiftLockToggleRef then
                 shiftLockToggleRef.Text = "  Shift Lock (Right Shift)" .. (Config.ShiftLockEnabled and " [ ON ]" or " [ OFF ]")
-                shiftLockToggleRef.TextColor3 = Config.ShiftLockEnabled and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+                shiftLockToggleRef.TextColor3 = Config.ShiftLockEnabled and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
             end
         end
     end
 end)
 
----------------------------------------------------------
--- UI ELEMENT BUILDERS
----------------------------------------------------------
 local activeTab = nil
 local function CreateTab(name)
     local TabBtn = Instance.new("TextButton", Sidebar)
@@ -687,7 +632,7 @@ local function CreateTab(name)
     Page.BackgroundTransparency = 1
     Page.BorderSizePixel = 0
     Page.ScrollBarThickness = 2
-    Page.ScrollBarImageColor3 = Color3.fromRGB(0, 255, 204)
+    Page.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 255)
     Page.Visible = false
 
     local PageLayout = Instance.new("UIListLayout", Page)
@@ -722,7 +667,7 @@ local function CreateTab(name)
         btn.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
         btn.BorderSizePixel = 0
         btn.Text = "  " .. labelText .. (defaultState and " [ ON ]" or " [ OFF ]")
-        btn.TextColor3 = defaultState and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+        btn.TextColor3 = defaultState and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
         btn.Font = Enum.Font.GothamMedium
         btn.TextSize = 12
         btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -734,7 +679,7 @@ local function CreateTab(name)
         btn.MouseButton1Click:Connect(function()
             state = not state
             btn.Text = "  " .. labelText .. (state and " [ ON ]" or " [ OFF ]")
-            TweenService:Create(btn, TweenInfo.new(0.15), {TextColor3 = state and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)}):Play()
+            TweenService:Create(btn, TweenInfo.new(0.15), {TextColor3 = state and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)}):Play()
             callback(state)
             saveConfig()
         end)
@@ -746,7 +691,7 @@ local function CreateTab(name)
         btn.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
         btn.BorderSizePixel = 0
         btn.Text = "  " .. labelText .. ": [" .. tostring(defaultKey.Name) .. "] (" .. (Config.AimbotEnabledState and "ON" or "OFF") .. ")"
-        btn.TextColor3 = Config.AimbotEnabledState and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+        btn.TextColor3 = Config.AimbotEnabledState and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
         btn.Font = Enum.Font.GothamMedium
         btn.TextSize = 12
         btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -758,13 +703,13 @@ local function CreateTab(name)
             if listening then return end
             listening = true
             btn.Text = "  " .. labelText .. ": [Press Any Key...]"
-            btn.TextColor3 = Color3.fromRGB(0, 255, 204)
+            btn.TextColor3 = Color3.fromRGB(0, 120, 255)
             local conn
             conn = UserInputService.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Keyboard then
                     Config.AimbotKey = input.KeyCode
                     btn.Text = "  " .. labelText .. ": [" .. tostring(input.KeyCode.Name) .. "] (" .. (Config.AimbotEnabledState and "ON" or "OFF") .. ")"
-                    btn.TextColor3 = Config.AimbotEnabledState and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+                    btn.TextColor3 = Config.AimbotEnabledState and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
                     callback(input.KeyCode)
                     saveConfig()
                     conn:Disconnect()
@@ -780,7 +725,7 @@ local function CreateTab(name)
         btn.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
         btn.BorderSizePixel = 0
         btn.Text = "  " .. labelText .. ": [" .. tostring(defaultKey.Name) .. "] (" .. (Config.AutoShootEnabled and "ON" or "OFF") .. ")"
-        btn.TextColor3 = Config.AutoShootEnabled and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+        btn.TextColor3 = Config.AutoShootEnabled and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
         btn.Font = Enum.Font.GothamMedium
         btn.TextSize = 12
         btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -792,13 +737,13 @@ local function CreateTab(name)
             if listening then return end
             listening = true
             btn.Text = "  " .. labelText .. ": [Press Any Key...]"
-            btn.TextColor3 = Color3.fromRGB(0, 255, 204)
+            btn.TextColor3 = Color3.fromRGB(0, 120, 255)
             local conn
             conn = UserInputService.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Keyboard then
                     Config.AutoShootKey = input.KeyCode
                     btn.Text = "  " .. labelText .. ": [" .. tostring(input.KeyCode.Name) .. "] (" .. (Config.AutoShootEnabled and "ON" or "OFF") .. ")"
-                    btn.TextColor3 = Config.AutoShootEnabled and Color3.fromRGB(0, 255, 120) or Color3.fromRGB(150, 165, 190)
+                    btn.TextColor3 = Config.AutoShootEnabled and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
                     callback(input.KeyCode)
                     saveConfig()
                     conn:Disconnect()
@@ -825,7 +770,7 @@ local function CreateTab(name)
             if listening then return end
             listening = true
             btn.Text = "  " .. labelText .. ": [Press Any Key...]"
-            btn.TextColor3 = Color3.fromRGB(0, 255, 204)
+            btn.TextColor3 = Color3.fromRGB(0, 120, 255)
             local conn
             conn = UserInputService.InputBegan:Connect(function(input)
                 if input.UserInputType == Enum.UserInputType.Keyboard then
@@ -865,6 +810,120 @@ local function CreateTab(name)
         end)
     end
 
+    function Elements:AddPlayerTargetList()
+        local container = Instance.new("ScrollingFrame", Page)
+        container.Size = UDim2.new(1, -6, 0, 150)
+        container.BackgroundTransparency = 1
+        container.BorderSizePixel = 0
+        container.ScrollBarThickness = 4
+        container.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 255)
+        
+        local listLayout = Instance.new("UIListLayout", container)
+        listLayout.Padding = UDim.new(0, 4)
+        
+        local function updateList()
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("TextButton") then 
+                    child:Destroy() 
+                end
+            end
+            
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local pBtn = Instance.new("TextButton", container)
+                    pBtn.Size = UDim2.new(1, -6, 0, 32)
+                    pBtn.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
+                    pBtn.BorderSizePixel = 0
+                    
+                    local isSelected = (Config.SelectedTargetName == player.Name)
+                    pBtn.Text = "  " .. player.Name .. (isSelected and "  [ ACTIVE TARGET ]" or "")
+                    pBtn.TextColor3 = isSelected and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
+                    pBtn.Font = Enum.Font.GothamMedium
+                    pBtn.TextSize = 12
+                    pBtn.TextXAlignment = Enum.TextXAlignment.Left
+                    
+                    Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 6)
+                    
+                    pBtn.MouseButton1Click:Connect(function()
+                        Config.SelectedTargetName = player.Name
+                        saveConfig()
+                        updateList()
+                    end)
+                end
+            end
+            container.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+        end
+        
+        listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            container.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+        end)
+        
+        updateList()
+        Players.PlayerAdded:Connect(updateList)
+        Players.PlayerRemoving:Connect(updateList)
+    end
+
+    function Elements:AddPlayerChecklist()
+        local container = Instance.new("ScrollingFrame", Page)
+        container.Size = UDim2.new(1, -6, 0, 180)
+        container.BackgroundTransparency = 1
+        container.BorderSizePixel = 0
+        container.ScrollBarThickness = 4
+        container.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 255)
+        
+        local listLayout = Instance.new("UIListLayout", container)
+        listLayout.Padding = UDim.new(0, 4)
+        
+        local function updateList()
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("TextButton") then 
+                    child:Destroy() 
+                end
+            end
+            
+            for _, player in ipairs(Players:GetPlayers()) do
+                if player ~= LocalPlayer then
+                    local pBtn = Instance.new("TextButton", container)
+                    pBtn.Size = UDim2.new(1, -6, 0, 32)
+                    pBtn.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
+                    pBtn.BorderSizePixel = 0
+                    
+                    local isWhitelisted = Config.Whitelist and Config.Whitelist[player.Name] == true
+                    pBtn.Text = "  " .. player.Name .. (isWhitelisted and "  [ ✓ ]" or "  [   ]")
+                    pBtn.TextColor3 = isWhitelisted and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(150, 165, 190)
+                    pBtn.Font = Enum.Font.GothamMedium
+                    pBtn.TextSize = 12
+                    pBtn.TextXAlignment = Enum.TextXAlignment.Left
+                    
+                    Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 6)
+                    
+                    pBtn.MouseButton1Click:Connect(function()
+                        Config.Whitelist = Config.Whitelist or {}
+                        if Config.Whitelist[player.Name] then
+                            Config.Whitelist[player.Name] = nil
+                            pBtn.Text = "  " .. player.Name .. "  [   ]"
+                            pBtn.TextColor3 = Color3.fromRGB(150, 165, 190)
+                        else
+                            Config.Whitelist[player.Name] = true
+                            pBtn.Text = "  " .. player.Name .. "  [ ✓ ]"
+                            pBtn.TextColor3 = Color3.fromRGB(255, 255, 0)
+                        end
+                        saveConfig()
+                    end)
+                end
+            end
+            container.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+        end
+        
+        listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            container.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+        end)
+        
+        updateList()
+        Players.PlayerAdded:Connect(updateList)
+        Players.PlayerRemoving:Connect(updateList)
+    end
+
     function Elements:AddSlider(labelText, min, max, default, callback)
         local container = Instance.new("Frame", Page)
         container.Size = UDim2.new(1, -6, 0, 52)
@@ -891,7 +950,7 @@ local function CreateTab(name)
 
         local sliderFill = Instance.new("Frame", sliderBg)
         sliderFill.Size = UDim2.new(math.clamp((default - min) / (max - min), 0, 1), 0, 1, 0)
-        sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 204)
+        sliderFill.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
         sliderFill.BorderSizePixel = 0
         Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0)
 
@@ -912,7 +971,7 @@ local function CreateTab(name)
     function Elements:AddButton(labelText, callback)
         local btn = Instance.new("TextButton", Page)
         btn.Size = UDim2.new(1, -6, 0, 36)
-        btn.BackgroundColor3 = Color3.fromRGB(0, 255, 204)
+        btn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
         btn.BorderSizePixel = 0
         btn.Text = "  " .. labelText
         btn.TextColor3 = Color3.fromRGB(11, 13, 18)
@@ -937,7 +996,6 @@ CombatTab:AddSlider("Smoothness", 1, 20, Config.Smoothness, function(v) Config.S
 CombatTab:AddSlider("FOV Radius", 50, 500, Config.AimbotFOV, function(v) Config.AimbotFOV = v end)
 CombatTab:AddToggle("Show FOV Circle", Config.ShowFOVCircle, function(s) Config.ShowFOVCircle = s end)
 CombatTab:AddToggle("Wall Check", Config.WallCheck, function(s) Config.WallCheck = s end)
-CombatTab:AddDropdown("Target Part", {"Head", "HumanoidRootPart", "Torso"}, Config.TargetPartName, function(v) Config.TargetPartName = v end)
 
 local VisualsTab = CreateTab("Visuals")
 VisualsTab:AddToggle("Box ESP", Config.BoxESP, function(s) Config.BoxESP = s end)
@@ -948,12 +1006,6 @@ VisualsTab:AddToggle("Health Bar", Config.HealthBar, function(s) Config.HealthBa
 VisualsTab:AddToggle("Fullbright", Config.FullbrightEnabled, function(s) Config.FullbrightEnabled = s; toggleFullbright(s) end)
 VisualsTab:AddToggle("Freecam", Config.FreecamEnabled, function(s) Config.FreecamEnabled = s; toggleFreecam(s) end)
 VisualsTab:AddSlider("Freecam Speed", 10, 200, Config.FreecamSpeed, function(v) Config.FreecamSpeed = v end)
-
-local CrosshairTab = CreateTab("Crosshair")
-CrosshairTab:AddToggle("Custom Crosshair", Config.CustomCrosshairEnabled, function(s) Config.CustomCrosshairEnabled = s; updateCrosshairLayout() end)
-CrosshairTab:AddDropdown("Crosshair Style", {"Cross", "Dot", "Circle", "T-Shape"}, Config.CrosshairStyle, function(v) Config.CrosshairStyle = v; updateCrosshairLayout() end)
-CrosshairTab:AddSlider("Crosshair Size", 2, 30, Config.CrosshairSize, function(v) Config.CrosshairSize = v; updateCrosshairLayout() end)
-CrosshairTab:AddSlider("Crosshair Gap", 0, 20, Config.CrosshairGap, function(v) Config.CrosshairGap = v; updateCrosshairLayout() end)
 
 local MovementTab = CreateTab("Movement")
 MovementTab:AddSlider("WalkSpeed", 16, 200, Config.WalkSpeed, function(v) Config.WalkSpeed = v end)
@@ -967,8 +1019,54 @@ MovementTab:AddSlider("Spin Speed", 5, 100, Config.SpinSpeed, function(v) Config
 MovementTab:AddToggle("Spinbot", Config.Spinbot, function(s) Config.Spinbot = s end)
 MovementTab:AddToggle("Shift Lock (Right Shift)", Config.ShiftLockEnabled, function(s) Config.ShiftLockEnabled = s end)
 
+local TargetMenuTab = CreateTab("Target Menu")
+TargetMenuTab:AddPlayerTargetList()
+
+TargetMenuTab:AddDropdown("Target Action Mode", {"None", "Spectate", "Orbit"}, Config.TargetActionMode, function(v) 
+    Config.TargetActionMode = v 
+    if v == "None" then
+        local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if hum then Camera.CameraSubject = hum end
+    end
+end)
+TargetMenuTab:AddSlider("Orbit Radius", 5, 50, Config.OrbitRadius, function(v) Config.OrbitRadius = v end)
+TargetMenuTab:AddSlider("Orbit Speed", 1, 30, Config.OrbitSpeed, function(v) Config.OrbitSpeed = v end)
+
+TargetMenuTab:AddButton("Teleport to Target", function()
+    local target = getTargetPlayer()
+    if target and target.Character then
+        local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot and myRoot then
+            myRoot.CFrame = targetRoot.CFrame + Vector3.new(0, 3, 0)
+        end
+    end
+end)
+
+TargetMenuTab:AddButton("Bring Target (Tp them to me)", function()
+    local target = getTargetPlayer()
+    if target and target.Character then
+        local targetRoot = target.Character:FindFirstChild("HumanoidRootPart")
+        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot and myRoot then
+            targetRoot.CFrame = myRoot.CFrame + Vector3.new(3, 0, 0)
+        end
+    end
+end)
+
+local WhitelistTab = CreateTab("Whitelist")
+
+WhitelistTab:AddToggle("Ignore Teammates (Auto Team Check)", Config.TeamCheck, function(s)
+    Config.TeamCheck = s
+end)
+
+WhitelistTab:AddPlayerChecklist()
+
+WhitelistTab:AddButton("Clear Entire Whitelist", function()
+    Config.Whitelist = {}
+    saveConfig()
+end)
+
 local SettingsTab = CreateTab("Settings")
 SettingsTab:AddKeybind("Menu Key", Config.MenuKey, function(k) Config.MenuKey = k end)
 SettingsTab:AddButton("Rejoin Server", function() TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end)
-
-updateCrosshairLayout()
