@@ -1,4 +1,4 @@
- -- Universal Framework (Cyberpunk Neon V4.0 - Interactive Target List Version + Wiggle Action Mode)
+-- Universal Framework (Cyberpunk Neon V4.0 - Interactive Target List Version + Wiggle Action Mode)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
