@@ -1,4 +1,4 @@
--- Universal Framework (Cyberpunk Neon V4.0 - Interactive Target List Version)
+-- Universal Framework (Cyberpunk Neon V4.0 - Interactive Target List Version + Wiggle Action Mode)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -56,6 +56,9 @@ local Config = {
     TargetActionMode = "None",
     OrbitRadius = 15,
     OrbitSpeed = 10,
+    WiggleDistance = 3,
+    WiggleSpeed = 25,
+    WiggleAmplitude = 2,
     ActiveOrbitTarget = nil,
     ActiveSpectateTarget = nil,
     SelectedTargetName = "None",
@@ -325,6 +328,14 @@ RunService.RenderStepped:Connect(function(dt)
         if targetRoot and myRoot then
             local t = tick() * Config.OrbitSpeed
             myRoot.CFrame = CFrame.new(targetRoot.Position + Vector3.new(math.cos(t) * Config.OrbitRadius, 3, math.sin(t) * Config.OrbitRadius), targetRoot.Position)
+        end
+    elseif Config.TargetActionMode == "Wiggle Behind" and targetPlayer then
+        local targetRoot = targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot and myRoot then
+            local wiggleOffset = math.sin(tick() * Config.WiggleSpeed) * Config.WiggleAmplitude
+            local behindCF = targetRoot.CFrame * CFrame.new(wiggleOffset, 0, Config.WiggleDistance)
+            myRoot.CFrame = CFrame.new(behindCF.Position, targetRoot.Position)
         end
     elseif Config.TargetActionMode == "None" then
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -1022,7 +1033,7 @@ MovementTab:AddToggle("Shift Lock (Right Shift)", Config.ShiftLockEnabled, funct
 local TargetMenuTab = CreateTab("Target Menu")
 TargetMenuTab:AddPlayerTargetList()
 
-TargetMenuTab:AddDropdown("Target Action Mode", {"None", "Spectate", "Orbit"}, Config.TargetActionMode, function(v) 
+TargetMenuTab:AddDropdown("Target Action Mode", {"None", "Spectate", "Orbit", "Wiggle Behind"}, Config.TargetActionMode, function(v) 
     Config.TargetActionMode = v 
     if v == "None" then
         local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -1031,6 +1042,10 @@ TargetMenuTab:AddDropdown("Target Action Mode", {"None", "Spectate", "Orbit"}, C
 end)
 TargetMenuTab:AddSlider("Orbit Radius", 5, 50, Config.OrbitRadius, function(v) Config.OrbitRadius = v end)
 TargetMenuTab:AddSlider("Orbit Speed", 1, 30, Config.OrbitSpeed, function(v) Config.OrbitSpeed = v end)
+
+TargetMenuTab:AddSlider("Wiggle Distance", 1, 10, Config.WiggleDistance, function(v) Config.WiggleDistance = v end)
+TargetMenuTab:AddSlider("Wiggle Speed", 5, 60, Config.WiggleSpeed, function(v) Config.WiggleSpeed = v end)
+TargetMenuTab:AddSlider("Wiggle Amplitude", 1, 10, Config.WiggleAmplitude, function(v) Config.WiggleAmplitude = v end)
 
 TargetMenuTab:AddButton("Teleport to Target", function()
     local target = getTargetPlayer()
