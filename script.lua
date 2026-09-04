@@ -63,6 +63,8 @@ local Config = {
     ActiveSpectateTarget = nil,
     SelectedTargetName = "None",
     
+    Waypoints = {},
+    
     MenuKey = Enum.KeyCode.RightControl
 }
 
@@ -935,6 +937,125 @@ local function CreateTab(name)
         Players.PlayerRemoving:Connect(updateList)
     end
 
+    function Elements:AddWaypointManager()
+        local container = Instance.new("ScrollingFrame", Page)
+        container.Size = UDim2.new(1, -6, 0, 220)
+        container.BackgroundTransparency = 1
+        container.BorderSizePixel = 0
+        container.ScrollBarThickness = 4
+        container.ScrollBarImageColor3 = Color3.fromRGB(0, 120, 255)
+        
+        local listLayout = Instance.new("UIListLayout", container)
+        listLayout.Padding = UDim.new(0, 4)
+        
+        local function updateList()
+            for _, child in ipairs(container:GetChildren()) do
+                if child:IsA("Frame") then 
+                    child:Destroy() 
+                end
+            end
+            
+            Config.Waypoints = Config.Waypoints or {}
+            for index, wp in ipairs(Config.Waypoints) do
+                local itemFrame = Instance.new("Frame", container)
+                itemFrame.Size = UDim2.new(1, -6, 0, 36)
+                itemFrame.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
+                itemFrame.BorderSizePixel = 0
+                Instance.new("UICorner", itemFrame).CornerRadius = UDim.new(0, 6)
+                
+                local nameLabel = Instance.new("TextLabel", itemFrame)
+                nameLabel.Size = UDim2.new(1, -150, 1, 0)
+                nameLabel.Position = UDim2.new(0, 8, 0, 0)
+                nameLabel.BackgroundTransparency = 1
+                nameLabel.Text = "  " .. wp.Name
+                nameLabel.TextColor3 = Color3.fromRGB(200, 215, 240)
+                nameLabel.Font = Enum.Font.GothamMedium
+                nameLabel.TextSize = 12
+                nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+                
+                local function createWpBtn(text, xPos, color, hoverColor, onClick)
+                    local b = Instance.new("TextButton", itemFrame)
+                    b.Size = UDim2.new(0, 42, 0, 24)
+                    b.Position = UDim2.new(1, xPos, 0.5, -12)
+                    b.BackgroundColor3 = color
+                    b.BorderSizePixel = 0
+                    b.Text = text
+                    b.TextColor3 = Color3.fromRGB(11, 13, 18)
+                    b.Font = Enum.Font.GothamBold
+                    b.TextSize = 11
+                    Instance.new("UICorner", b).CornerRadius = UDim.new(0, 4)
+                    b.MouseButton1Click:Connect(onClick)
+                    return b
+                end
+                
+                -- Delete Button [DEL]
+                createWpBtn("DEL", -48, Color3.fromRGB(255, 60, 90), Color3.fromRGB(255, 100, 120), function()
+                    table.remove(Config.Waypoints, index)
+                    saveConfig()
+                    updateList()
+                end)
+                
+                -- Load/Teleport Button [LOAD]
+                createWpBtn("LOAD", -96, Color3.fromRGB(0, 200, 255), Color3.fromRGB(100, 220, 255), function()
+                    local char = LocalPlayer.Character
+                    local root = char and char:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        root.CFrame = CFrame.new(wp.X, wp.Y, wp.Z)
+                    end
+                end)
+            end
+            container.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+        end
+        
+        listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            container.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+        end)
+        
+        updateList()
+        
+        -- Save Waypoint Button & Input Box container
+        local saveRow = Instance.new("Frame", Page)
+        saveRow.Size = UDim2.new(1, -6, 0, 36)
+        saveRow.BackgroundTransparency = 1
+        
+        local textBox = Instance.new("TextBox", saveRow)
+        textBox.Size = UDim2.new(1, -110, 1, 0)
+        textBox.BackgroundColor3 = Color3.fromRGB(16, 20, 28)
+        textBox.BorderSizePixel = 0
+        textBox.PlaceholderText = "Waypoint Name..."
+        textBox.Text = "Waypoint " .. (#(Config.Waypoints or {}) + 1)
+        textBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textBox.PlaceholderColor3 = Color3.fromRGB(100, 115, 140)
+        textBox.Font = Enum.Font.GothamMedium
+        textBox.TextSize = 12
+        textBox.ClearTextOnFocus = false
+        Instance.new("UICorner", textBox).CornerRadius = UDim.new(0, 6)
+        
+        local saveBtn = Instance.new("TextButton", saveRow)
+        saveBtn.Size = UDim2.new(0, 100, 1, 0)
+        saveBtn.Position = UDim2.new(1, -100, 0, 0)
+        saveBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 204)
+        saveBtn.BorderSizePixel = 0
+        saveBtn.Text = "SAVE [ + ]"
+        saveBtn.TextColor3 = Color3.fromRGB(11, 13, 18)
+        saveBtn.Font = Enum.Font.GothamBold
+        saveBtn.TextSize = 12
+        Instance.new("UICorner", saveBtn).CornerRadius = UDim.new(0, 6)
+        
+        saveBtn.MouseButton1Click:Connect(function()
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            if root then
+                local pos = root.Position
+                local name = textBox.Text ~= "" and textBox.Text or ("Waypoint " .. (#Config.Waypoints + 1))
+                table.insert(Config.Waypoints, {Name = name, X = pos.X, Y = pos.Y, Z = pos.Z})
+                saveConfig()
+                updateList()
+                textBox.Text = "Waypoint " .. (#Config.Waypoints + 1)
+            end
+        end)
+    end
+
     function Elements:AddSlider(labelText, min, max, default, callback)
         local container = Instance.new("Frame", Page)
         container.Size = UDim2.new(1, -6, 0, 52)
@@ -1068,6 +1189,9 @@ TargetMenuTab:AddButton("Bring Target (Tp them to me)", function()
         end
     end
 end)
+
+local WaypointTab = CreateTab("Waypoint")
+WaypointTab:AddWaypointManager()
 
 local WhitelistTab = CreateTab("Whitelist")
 
